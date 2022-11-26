@@ -1,20 +1,12 @@
 import javax.imageio.ImageIO;
 import java.awt.image.*;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Arrays;
 
 public class Main {
     public static void main(String[] args) throws IOException {
 //        double startTime;
-//
+
 //        startTime = System.nanoTime();
 
         String filePath = "C:\\Users\\User\\IdeaProjects\\CorrectionCustomLensDistortion\\src\\lhouse.png";
@@ -38,12 +30,11 @@ public class Main {
         int width = image[0].length;
         int height = image.length;
 
-        int[][][] newImage = new int[height * 4][width * 4][3];
-
-        for (int h = 0; h < height * 4; h++) {
-            for (int w = 0; w < width * 4; w++) {
-                System.out.println(h + " " + w + " " + h * 0.25 + " " + w * 0.25);
-                newImage[h][w] = getSubPixel(image, h * 0.25, w * 0.25);
+        int scale = 4;
+        int[][][] newImage = new int[height * scale][width * scale][3];
+        for (int h = 0; h < height * scale; h++) {
+            for (int w = 0; w < width * scale; w++) {
+                newImage[h][w] = getSubPixel(image, (h - (scale - 1) / 2.0) / scale, (w - (scale - 1) / 2.0) / scale);
             }
         }
 
@@ -55,8 +46,6 @@ public class Main {
 //        for (int h = -height / 2; h < height / 2; h++) {
 //            for (int w = -width / 2; w < width / 2; w++) {
 //                newImage[h + height / 2][w + width / 2] = getSubPixel(image, h + height / 2 + 0.5, w + width / 2 + 0.5);
-
-
 //                r = Math.pow(Math.pow(h, 2) + Math.pow(w, 2), 0.5);
 //                dy = 0;
 //                dx = 0;
@@ -113,38 +102,45 @@ public class Main {
         return 0;
     }
 
-    private static int toColor(double color) {
-        if (0 <= color && color <= 255) {
-            return (int) color;
+    private static double restrictRange(double num, double left, double right) {
+        if (left <= num && num <= right) {
+            return num;
         }
-        if (color > 255) {
-            return 255;
+        if (num > right) {
+            return right;
+        } else {
+            return left;
         }
-        return 0;
     }
 
     private static int[] cubicInterpolation(int[] p0, int[] p1, int[] p2, int[] p3, double x) {
         int[] rgb = new int[3];
 
-        rgb[0] = toColor(Math.pow(x, 3) * (-0.5 * p0[0] + 1.5 * p1[0] - 1.5 * p2[0] + 0.5 * p3[0]) +
-                Math.pow(x, 2) * (p0[0] - 2.5 * p1[0] + 2 * p2[0] - 0.5 * p3[0]) +
-                x * (-0.5 * p0[0] + 0.5 * p2[0]) +
-                p1[0]);
+        rgb[0] = (int) restrictRange(
+                Math.pow(x, 3) * (-0.5 * p0[0] + 1.5 * p1[0] - 1.5 * p2[0] + 0.5 * p3[0]) + Math.pow(x, 2) * (p0[0] - 2.5 * p1[0] + 2 * p2[0] - 0.5 * p3[0]) + x * (-0.5 * p0[0] + 0.5 * p2[0]) + p1[0],
+                0,
+                255
+        );
 
-        rgb[1] = toColor(Math.pow(x, 3) * (-0.5 * p0[1] + 1.5 * p1[1] - 1.5 * p2[1] + 0.5 * p3[1]) +
-                Math.pow(x, 2) * (p0[1] - 2.5 * p1[1] + 2 * p2[1] - 0.5 * p3[1]) +
-                x * (-0.5 * p0[1] + 0.5 * p2[1]) +
-                p1[1]);
+        rgb[1] = (int) restrictRange(
+                Math.pow(x, 3) * (-0.5 * p0[1] + 1.5 * p1[1] - 1.5 * p2[1] + 0.5 * p3[1]) + Math.pow(x, 2) * (p0[1] - 2.5 * p1[1] + 2 * p2[1] - 0.5 * p3[1]) + x * (-0.5 * p0[1] + 0.5 * p2[1]) + p1[1],
+                0,
+                255
+        );
 
-        rgb[2] = toColor(Math.pow(x, 3) * (-0.5 * p0[2] + 1.5 * p1[2] - 1.5 * p2[2] + 0.5 * p3[2]) +
-                Math.pow(x, 2) * (p0[2] - 2.5 * p1[2] + 2 * p2[2] - 0.5 * p3[2]) +
-                x * (-0.5 * p0[2] + 0.5 * p2[2]) +
-                p1[2]);
+        rgb[2] = (int) restrictRange(
+                Math.pow(x, 3) * (-0.5 * p0[2] + 1.5 * p1[2] - 1.5 * p2[2] + 0.5 * p3[2]) + Math.pow(x, 2) * (p0[2] - 2.5 * p1[2] + 2 * p2[2] - 0.5 * p3[2]) + x * (-0.5 * p0[2] + 0.5 * p2[2]) + p1[2],
+                0,
+                255
+        );
 
         return rgb;
     }
 
     private static int[] getSubPixel(int[][][] image, double y, double x) {
+        y = restrictRange(y, 0, image.length - 1);
+        x = restrictRange(x, 0, image[0].length - 1);
+
         if (y % 1 == 0 && x % 1 == 0) {
             return image[(int) y][(int) x];
         }
@@ -155,45 +151,35 @@ public class Main {
             int x2 = x1 + 1;
             int x3 = Math.min(x2 + 1, image[0].length - 1);
 
-
-            System.out.println(y + " " + x);
-            System.out.println((image.length - 1) + " " + (image[0].length - 1));
-//            System.out.println(y0 + " " + y1 + " " + y2 + " " + y3);
-            System.out.println(x0 + " " + x1 + " " + x2 + " " + x3);
-            System.out.println(" ");
-
             return cubicInterpolation(image[(int) y][x0], image[(int) y][x1], image[(int) y][x2], image[(int) y][x3], x % 1);
         }
 
-        return new int[]{0, 0, 0};
-//
-//        if (x % 1 == 0) {
-//            int y0 = Math.max((int) y - 1, 0);
-//            int y1 = (int) y;
-//            int y2 = y1 + 1;
-//            int y3 = Math.min(y2 + 1, image.length - 1);
-//
-//            return cubicInterpolation(image[y0][(int) x], image[y1][(int) x], image[y2][(int) x], image[y3][(int) x], y % 1);
-//        }
+        if (x % 1 == 0) {
+            int y0 = Math.max((int) y - 1, 0);
+            int y1 = (int) y;
+            int y2 = y1 + 1;
+            int y3 = Math.min(y2 + 1, image.length - 1);
 
-//        int y0 = Math.max((int) y - 1, 0);
-//        int y1 = (int) y;
-//        int y2 = y1 + 1;
-//        int y3 = Math.min(y2 + 1, image.length - 1);
-//
-//        int x0 = Math.max((int) x - 1, 0);
-//        int x1 = (int) x;
-//        int x2 = x1 + 1;
-//        int x3 = Math.min(x2 + 1, image[0].length - 1);
+            return cubicInterpolation(image[y0][(int) x], image[y1][(int) x], image[y2][(int) x], image[y3][(int) x], y % 1);
+        }
 
-//
-//        return cubicInterpolation(
-//                cubicInterpolation(image[y0][x0], image[y0][x1], image[y0][x2], image[y0][x3], x % 1),
-//                cubicInterpolation(image[y1][x0], image[y1][x1], image[y1][x2], image[y1][x3], x % 1),
-//                cubicInterpolation(image[y2][x0], image[y2][x1], image[y2][x2], image[y2][x3], x % 1),
-//                cubicInterpolation(image[y3][x0], image[y3][x1], image[y3][x2], image[y3][x3], x % 1),
-//                y % 1
-//        );
+        int y0 = Math.max((int) y - 1, 0);
+        int y1 = (int) y;
+        int y2 = y1 + 1;
+        int y3 = Math.min(y2 + 1, image.length - 1);
+
+        int x0 = Math.max((int) x - 1, 0);
+        int x1 = (int) x;
+        int x2 = x1 + 1;
+        int x3 = Math.min(x2 + 1, image[0].length - 1);
+
+        return cubicInterpolation(
+                cubicInterpolation(image[y0][x0], image[y0][x1], image[y0][x2], image[y0][x3], x % 1),
+                cubicInterpolation(image[y1][x0], image[y1][x1], image[y1][x2], image[y1][x3], x % 1),
+                cubicInterpolation(image[y2][x0], image[y2][x1], image[y2][x2], image[y2][x3], x % 1),
+                cubicInterpolation(image[y3][x0], image[y3][x1], image[y3][x2], image[y3][x3], x % 1),
+                y % 1
+        );
     }
 
     private static BufferedImage getBufferedImage(int[][][] image) {
